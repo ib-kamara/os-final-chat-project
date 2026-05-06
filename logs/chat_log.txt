@@ -1,0 +1,8 @@
+[1778032828] Server started on port 8080
+[1778032850] Client4 connected and joined group 1
+[1778032871] Client5 connected and joined group 1
+[1778032886] Client4 sent message in group 1: hello from client one
+[1778032908] Client5 sent message in group 1: hello from client two
+[1778032920] Client5 switched to group 2
+[1778032932] Client4 sent message in group 1: this should only be in group one
+[1778032966] Client5 disconnected
