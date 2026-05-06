@@ -26,6 +26,21 @@ public:
             file.close();
         }
     }
+
+    // NEW PERFORMANCE METRIC FUNCTION
+    void writeMetric(std::string text)
+    {
+        std::lock_guard<std::mutex> lock(logMutex);
+
+        std::ofstream file;
+        file.open("logs/performance.txt", std::ios::app);
+
+        if (file.is_open())
+        {
+            file << "[" << time(nullptr) << "] " << text << std::endl;
+            file.close();
+        }
+    }
 };
 
 #endif

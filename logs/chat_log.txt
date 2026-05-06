@@ -6,3 +6,6 @@
 [1778032920] Client5 switched to group 2
 [1778032932] Client4 sent message in group 1: this should only be in group one
 [1778032966] Client5 disconnected
+[1778033173] Client7 connected and joined group 1
+[1778033192] Client7 sent message in group 1: cat logs/performance.txt
+[1778033212] Client7 disconnected

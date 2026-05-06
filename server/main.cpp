@@ -53,7 +53,7 @@ void broadcastToGroup(int groupID, int senderSocket, std::string message)
 
         if (clientSocket != senderSocket)
         {
-            std::string text = "Group " + std::to_string(groupID) + " message: " + message + "\n";
+            std::string text = "Group " + std::to_string(groupID) + ": " + message + "\n";
             sendText(clientSocket, text);
         }
     }
@@ -89,18 +89,9 @@ void handleClient(int clientSocket)
         groupClients[currentGroup].push_back(clientSocket);
     }
 
-    logger.writeLog(senderName + " connected and joined group 1");
+    logger.writeLog(senderName + " connected");
 
-    sendText(clientSocket, "Welcome to the C++ Group Chat System.\n");
-    sendText(clientSocket, "You are in group 1.\n");
-    sendText(clientSocket, "Commands:\n");
-    sendText(clientSocket, "/join 1 or /join 2\n");
-    sendText(clientSocket, "/list\n");
-    sendText(clientSocket, "/history\n");
-    sendText(clientSocket, "/quit\n");
-    sendText(clientSocket, "Type a normal message to send it to your group.\n\n");
-
-    sendGroupHistory(clientSocket, currentGroup);
+    sendText(clientSocket, "Welcome.\nCommands: /join 1, /join 2, /list, /history, /quit\n");
 
     bool running = true;
 
@@ -119,12 +110,11 @@ void handleClient(int clientSocket)
 
             if (message == "/quit")
             {
-                sendText(clientSocket, "Goodbye.\n");
                 running = false;
             }
             else if (message == "/list")
             {
-                sendText(clientSocket, "Active groups: 1 and 2\n");
+                sendText(clientSocket, "Groups: 1, 2\n");
             }
             else if (message == "/history")
             {
@@ -133,7 +123,6 @@ void handleClient(int clientSocket)
             else if (message == "/join 1")
             {
                 removeClient(clientSocket);
-
                 currentGroup = 1;
 
                 {
@@ -141,15 +130,11 @@ void handleClient(int clientSocket)
                     groupClients[currentGroup].push_back(clientSocket);
                 }
 
-                sendText(clientSocket, "You joined group 1.\n");
-                sendGroupHistory(clientSocket, currentGroup);
-
-                logger.writeLog(senderName + " switched to group 1");
+                sendText(clientSocket, "Joined group 1\n");
             }
             else if (message == "/join 2")
             {
                 removeClient(clientSocket);
-
                 currentGroup = 2;
 
                 {
@@ -157,18 +142,20 @@ void handleClient(int clientSocket)
                     groupClients[currentGroup].push_back(clientSocket);
                 }
 
-                sendText(clientSocket, "You joined group 2.\n");
-                sendGroupHistory(clientSocket, currentGroup);
-
-                logger.writeLog(senderName + " switched to group 2");
+                sendText(clientSocket, "Joined group 2\n");
             }
             else
             {
+                // STORE MESSAGE
                 messageCache.addMessage(currentGroup, senderName, message);
 
-                logger.writeLog(senderName + " sent message in group " + std::to_string(currentGroup) + ": " + message);
+                // PERFORMANCE METRIC
+                logger.writeMetric("Message processed in group " + std::to_string(currentGroup));
 
-                sendText(clientSocket, "Message sent to group " + std::to_string(currentGroup) + ".\n");
+                // LOG
+                logger.writeLog(senderName + ": " + message);
+
+                sendText(clientSocket, "Sent.\n");
 
                 broadcastToGroup(currentGroup, clientSocket, message);
             }
@@ -184,18 +171,9 @@ void handleClient(int clientSocket)
 int main()
 {
     int serverSocket;
-    int clientSocket;
     struct sockaddr_in serverAddress;
-    struct sockaddr_in clientAddress;
-    socklen_t clientSize;
 
     serverSocket = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (serverSocket < 0)
-    {
-        std::cout << "Socket failed." << std::endl;
-        return 1;
-    }
 
     int option = 1;
     setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
@@ -204,45 +182,22 @@ int main()
     serverAddress.sin_addr.s_addr = INADDR_ANY;
     serverAddress.sin_port = htons(8080);
 
-    if (bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0)
-    {
-        std::cout << "Bind failed. Port may already be in use." << std::endl;
-        return 1;
-    }
-
-    if (listen(serverSocket, 10) < 0)
-    {
-        std::cout << "Listen failed." << std::endl;
-        return 1;
-    }
+    bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
+    listen(serverSocket, 10);
 
     ThreadPool pool(4);
 
-    std::cout << "Server listening on port 8080..." << std::endl;
-    logger.writeLog("Server started on port 8080");
-
-    clientSize = sizeof(clientAddress);
+    std::cout << "Server running on port 8080\n";
 
     while (true)
     {
-        clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddress, &clientSize);
+        int clientSocket = accept(serverSocket, nullptr, nullptr);
 
-        if (clientSocket < 0)
+        pool.enqueue([clientSocket]()
         {
-            std::cout << "Accept failed." << std::endl;
-        }
-        else
-        {
-            std::cout << "New client connected." << std::endl;
-
-            pool.enqueue([clientSocket]()
-            {
-                handleClient(clientSocket);
-            });
-        }
+            handleClient(clientSocket);
+        });
     }
-
-    close(serverSocket);
 
     return 0;
 }
